@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "Contact": {
+      "title": "Contact",
+      "description": "A contact record for a specific user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "number": { "type": "string" },
+        "label": { "type": "string" },
+        "image": { "type": "string" },
+        "initials": { "type": "string" },
+        "group": { "type": "string" },
+        "isStarred": { "type": "boolean" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "name", "number", "label", "initials", "group", "userId"]
+    },
+    "CallLog": {
+      "title": "CallLog",
+      "description": "A record of a made, received, or missed call.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "number": { "type": "string" },
+        "type": { "type": "string" },
+        "label": { "type": "string" },
+        "time": { "type": "string" },
+        "duration": { "type": "string" },
+        "count": { "type": "integer" },
+        "image": { "type": "string" },
+        "contactId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "number", "type", "label", "time", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "A user's custom contacts"
+    },
+    "/users/{userId}/callLogs/{logId}": {
+      "schema": "CallLog",
+      "description": "A user's call history"
+    }
+  }
+}

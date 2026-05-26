@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Contact model validation
+    function isValidContact(data, userId) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 128
+        && data.number is string && data.number.size() <= 64
+        && data.label is string && data.label.size() <= 32
+        && (!('image' in data) || (data.image is string && data.image.size() <= 512))
+        && data.initials is string && data.initials.size() <= 4
+        && data.group is string && data.group.size() <= 2
+        && (!('isStarred' in data) || data.isStarred is bool)
+        && data.userId == userId;
+    }
+
+    // CallLog model validation
+    function isValidCallLog(data, userId) {
+      return data.id is string && data.id.size() <= 128
+        && (!('name' in data) || (data.name is string && data.name.size() <= 128))
+        && data.number is string && data.number.size() <= 64
+        && data.type is string && (data.type == 'missed' || data.type == 'received' || data.type == 'made')
+        && data.label is string && data.label.size() <= 32
+        && data.time is string && data.time.size() <= 64
+        && (!('duration' in data) || (data.duration is string && data.duration.size() <= 32))
+        && (!('count' in data) || data.count is int)
+        && (!('image' in data) || (data.image is string && data.image.size() <= 512))
+        && (!('contactId' in data) || (data.contactId is string && data.contactId.size() <= 128))
+        && data.userId == userId;
+    }
+
+    // Match rules for user collections
+    match /users/{userId}/contacts/{contactId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(contactId) && isValidContact(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(contactId) && isValidContact(incoming(), userId)
+                    && incoming().id == existing().id && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/callLogs/{logId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(logId) && isValidCallLog(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(logId) && isValidCallLog(incoming(), userId)
+                    && incoming().id == existing().id && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId);
+    }
+  }
+}
